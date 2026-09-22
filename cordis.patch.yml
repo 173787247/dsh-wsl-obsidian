@@ -1,0 +1,9 @@
+- insert:
+    - id: dsh-wsl-obsidian
+      name: dsh-wsl-obsidian
+      config:
+        enabled: true
+        timeoutMs: 20000
+        # vaultPath: "/mnt/d/Notes/MyVault"   # prefer NTFS under /mnt/<drive>
+        # vaultName: "MyVault"                 # folder name Obsidian uses in obsidian://
+        # excludeDirs: [".obsidian", ".git", ".trash"]
