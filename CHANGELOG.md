@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- `obsidian_wikilinks` plus `obsidian_read` `resolveLinks` — parse/resolve `[[wikilinks]]`.
+- `obsidian_write` / `obsidian_append` require `confirm=true`.
+
 ## 0.1.0
 
 - Initial release: `obsidian_status`, `obsidian_list`, `obsidian_search`, `obsidian_read`, `obsidian_write`, `obsidian_append`, `obsidian_open`.

@@ -1,6 +1,6 @@
 {
   "name": "dsh-wsl-obsidian",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DeepSeek Harness tools: bridge WSL dsh agents to a Windows Obsidian vault (status/open/read/write/search).",
   "license": "MIT",
   "repository": {

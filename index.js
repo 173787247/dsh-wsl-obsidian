@@ -6,6 +6,7 @@ import {
   listNotes,
   readNote,
   resolveVaultConfig,
+  resolveWikilinks,
   searchNotes,
   writeNote,
   ensureMarkdownRel,
@@ -30,6 +31,7 @@ export function apply(ctx, config = {}) {
       "Use obsidian_* tools for the local Obsidian vault on Windows NTFS (prefer /mnt/<drive>/… paths).",
       "Keep the vault on Windows filesystem, not under the Linux home disk, so the Windows Obsidian app can watch files.",
       "obsidian_open launches the Windows Obsidian UI via obsidian:// — Obsidian must be installed on Windows.",
+      "obsidian_write / obsidian_append require confirm=true. Use obsidian_wikilinks or read with resolveLinks to follow [[links]].",
       "Do not invent vault paths; call obsidian_status first if unsure.",
     ].join(" "),
   });
@@ -137,13 +139,14 @@ export function apply(ctx, config = {}) {
 
   ctx.tools.register({
     name: "obsidian_read",
-    description: "Read a note by vault-relative path (e.g. Inbox/Note.md).",
+    description: "Read a note by vault-relative path (e.g. Inbox/Note.md). Set resolveLinks=true to resolve [[wikilinks]].",
     parameters: {
       type: "object",
       additionalProperties: false,
       required: ["path"],
       properties: {
         path: { type: "string", description: "Vault-relative path; .md added if missing." },
+        resolveLinks: { type: "boolean", description: "If true, also return resolved [[wikilinks]]." },
       },
     },
     output: {
@@ -155,22 +158,55 @@ export function apply(ctx, config = {}) {
     async execute(args) {
       const vault = vaultDeps();
       if (!vault.ok) return vault;
-      return readNote(vault.vaultPath, args?.path);
+      return readNote(vault.vaultPath, args?.path, {
+        resolveLinks: args?.resolveLinks === true,
+        excludeDirs,
+      });
     },
     presentCall: () => ({ card: "generic", title: "Obsidian read" }),
     presentResult: (_a, r) => ({ card: "generic", title: "Obsidian read", content: r.content }),
   });
 
   ctx.tools.register({
-    name: "obsidian_write",
-    description: "Create or overwrite a Markdown note (vault-relative path).",
+    name: "obsidian_wikilinks",
+    description: "Parse and resolve [[wikilinks]] in a note (vault-relative path).",
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["path", "content"],
+      required: ["path"],
+      properties: {
+        path: { type: "string", description: "Vault-relative note path." },
+      },
+    },
+    output: {
+      schema: { type: "object", additionalProperties: true },
+      render: (_a, v) => [{ type: "text", text: formatWikilinks(v) }],
+    },
+    timeoutMs,
+    isConcurrencySafe: () => true,
+    async execute(args) {
+      const vault = vaultDeps();
+      if (!vault.ok) return vault;
+      const note = readNote(vault.vaultPath, args?.path);
+      if (!note.ok) return note;
+      const links = resolveWikilinks(vault.vaultPath, note.content, { excludeDirs });
+      return { ok: true, path: note.path, count: links.length, links };
+    },
+    presentCall: () => ({ card: "generic", title: "Obsidian wikilinks" }),
+    presentResult: (_a, r) => ({ card: "generic", title: "Obsidian wikilinks", content: r.content }),
+  });
+
+  ctx.tools.register({
+    name: "obsidian_write",
+    description: "Create or overwrite a Markdown note (vault-relative path). Requires confirm=true.",
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "content", "confirm"],
       properties: {
         path: { type: "string" },
         content: { type: "string" },
+        confirm: { type: "boolean", description: "Must be true to write." },
       },
     },
     output: {
@@ -180,6 +216,9 @@ export function apply(ctx, config = {}) {
     timeoutMs,
     isConcurrencySafe: () => false,
     async execute(args) {
+      if (args?.confirm !== true) {
+        return { ok: false, error: "obsidian_write refused: pass confirm=true" };
+      }
       const vault = vaultDeps();
       if (!vault.ok) return vault;
       return writeNote(vault.vaultPath, args?.path, args?.content);
@@ -190,14 +229,15 @@ export function apply(ctx, config = {}) {
 
   ctx.tools.register({
     name: "obsidian_append",
-    description: "Append text to a Markdown note (creates parent dirs / file if needed).",
+    description: "Append text to a Markdown note (creates parent dirs / file if needed). Requires confirm=true.",
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["path", "content"],
+      required: ["path", "content", "confirm"],
       properties: {
         path: { type: "string" },
         content: { type: "string" },
+        confirm: { type: "boolean", description: "Must be true to append." },
       },
     },
     output: {
@@ -207,6 +247,9 @@ export function apply(ctx, config = {}) {
     timeoutMs,
     isConcurrencySafe: () => false,
     async execute(args) {
+      if (args?.confirm !== true) {
+        return { ok: false, error: "obsidian_append refused: pass confirm=true" };
+      }
       const vault = vaultDeps();
       if (!vault.ok) return vault;
       return appendNote(vault.vaultPath, args?.path, args?.content);
@@ -293,7 +336,20 @@ function formatSearch(v) {
 
 function formatRead(v) {
   if (!v.ok) return `obsidian_read failed: ${v.error}`;
-  return `# ${v.path}\n\n${v.content}`;
+  const head = `# ${v.path}\n\n${v.content}`;
+  if (!v.links?.length) return head;
+  const linkLines = v.links.map((l) => `- ${l.raw} → ${l.found ? l.path : "(missing)"}`).join("\n");
+  return `${head}\n\n## Wikilinks\n${linkLines}`;
+}
+
+function formatWikilinks(v) {
+  if (!v.ok) return `obsidian_wikilinks failed: ${v.error}`;
+  if (!v.links?.length) return `no wikilinks in ${v.path}`;
+  return [
+    `path: ${v.path}`,
+    `links: ${v.count}`,
+    ...v.links.map((l) => `- ${l.raw} → ${l.found ? l.path : "(missing)"}`),
+  ].join("\n");
 }
 
 function formatWrite(v) {

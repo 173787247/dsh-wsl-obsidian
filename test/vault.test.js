@@ -9,8 +9,10 @@ import {
   appendNote,
   listNotes,
   parseObsidianJson,
+  parseWikilinks,
   readNote,
   resolveVaultConfig,
+  resolveWikilinks,
   safeJoinVault,
   searchNotes,
   writeNote,
@@ -73,6 +75,27 @@ describe("vault io", () => {
     const r = readNote(fixtureVault, "Welcome.md");
     assert.equal(r.ok, true);
     assert.match(r.content, /Hello from fixture/);
+  });
+
+  it("parses and resolves wikilinks", () => {
+    const parsed = parseWikilinks("See [[Welcome]] and [[Inbox/Note|inbox]] and [[Missing]].");
+    assert.equal(parsed.length, 3);
+    assert.equal(parsed[0].target, "Welcome");
+    assert.equal(parsed[1].alias, "inbox");
+
+    const links = resolveWikilinks(
+      fixtureVault,
+      "See [[Welcome]] and [[Inbox/Note|inbox]] and [[Missing]].",
+    );
+    assert.equal(links[0].found, true);
+    assert.match(links[0].path, /Welcome\.md$/);
+    assert.equal(links[1].found, true);
+    assert.match(links[1].path, /Inbox\/Note\.md$/);
+    assert.equal(links[2].found, false);
+
+    const withLinks = readNote(fixtureVault, "Welcome.md", { resolveLinks: true });
+    assert.equal(withLinks.ok, true);
+    assert.ok(Array.isArray(withLinks.links));
   });
 
   it("write and append in temp vault", () => {
