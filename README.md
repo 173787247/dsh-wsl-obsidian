@@ -24,7 +24,7 @@ Keep the vault on **Windows NTFS**. Opening a vault from `\\wsl$\…` breaks Obs
 |-------|-------|
 | **Plugin** | `dsh-wsl-obsidian` **0.1.0** |
 | **Minimum dsh** | ≥ **0.1.2** |
-| **Latest verified** | See [dsh-wsl-kit Compatibility](https://github.com/173787247/dsh-wsl-kit#compatibility-2026-09) (currently **`0.1.7-alpha.2`**) — single source of truth for the suite |
+| **Latest verified** | See [dsh-wsl-kit Compatibility](https://github.com/173787247/dsh-wsl-kit#compatibility-2026-09) (currently **`0.2.0-rc.2`**) — single source of truth for the suite |
 | **Kit set** | optional (not in `daily`) |
 | **Obsidian** | Windows desktop app (install from [obsidian.md](https://obsidian.md)) |
 
