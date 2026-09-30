@@ -17,9 +17,9 @@ import { toWindowsPath } from "../lib/path.js";
 
 const vaultArg = process.argv[2]
   || process.env.OBSIDIAN_VAULT
-  || "/mnt/c/Users/rchua/Documents/dsh-wsl-obsidian-vault";
+  || `${process.env.HOME}/Documents/dsh-wsl-obsidian-vault`;
 
-const winFallback = "C:\\Users\\rchua\\Documents\\dsh-wsl-obsidian-vault";
+const winFallback = `${process.env.WSL_WINDOWS_HOME || "/mnt/c/Users"}/${process.env.WINDOWS_USER || "you"}/Documents/dsh-wsl-obsidian-vault`;
 const vaultPath = existsSync(vaultArg) ? vaultArg : (existsSync(winFallback) ? winFallback : vaultArg);
 
 const config = { vaultPath, vaultName: "dsh-wsl-obsidian-vault" };
