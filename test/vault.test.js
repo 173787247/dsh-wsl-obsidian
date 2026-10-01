@@ -49,6 +49,28 @@ describe("vault safety", () => {
     assert.equal(r.ok, false);
   });
 
+  it("rejects POSIX absolute paths instead of re-rooting them", () => {
+    for (const p of ["/etc/passwd", "/Inbox/Note.md", "//server/share/x.md"]) {
+      const r = safeJoinVault(fixtureVault, p);
+      assert.equal(r.ok, false, `${p} should be rejected`);
+      assert.equal(r.error, "absolute paths not allowed");
+    }
+  });
+
+  it("rejects Windows drive and UNC absolute paths", () => {
+    for (const p of ["C:\\Users\\a\\Vault\\x.md", "D:/notes/x.md", "\\\\server\\share\\x.md"]) {
+      const r = safeJoinVault(fixtureVault, p);
+      assert.equal(r.ok, false, `${p} should be rejected`);
+      assert.equal(r.error, "absolute paths not allowed");
+    }
+  });
+
+  it("readNote reports an absolute path as a contract error, not a missing note", () => {
+    const r = readNote(fixtureVault, "/etc/passwd");
+    assert.equal(r.ok, false);
+    assert.equal(r.error, "absolute paths not allowed");
+  });
+
   it("joins relative md", () => {
     const r = safeJoinVault(fixtureVault, "Inbox/Note.md");
     assert.equal(r.ok, true);
